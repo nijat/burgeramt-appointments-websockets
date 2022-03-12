@@ -1,3 +1,5 @@
+from cmath import log
+from enum import Enum
 from bs4 import BeautifulSoup, SoupStrainer
 from datetime import date, datetime
 from datetime import datetime, date, timedelta
@@ -6,6 +8,7 @@ import asyncio
 import csv
 import json
 import logging
+from fastapi import WebSocket
 import pytz
 import random
 import requests
@@ -45,7 +48,7 @@ last_message = {
     'appointmentDates': [],
     'connectedClients': len(connected_clients)
 }
-
+current_notification_type = "notify.run"
 
 def get_appointments():
     today = timezone.localize(datetime.now())
@@ -85,6 +88,7 @@ def parse_appointment_dates(page_content):
 def look_for_appointments():
     global delay
     try:
+        logger.warning("Looking for appointments...")
         appointments = get_appointments()
         delay = 30
         return {
@@ -114,26 +118,21 @@ def look_for_appointments():
             'connectedClients': len(connected_clients),
         }
 
-
-async def on_connect(websocket, path):
-    global last_message
-    connected_clients.append(websocket)
-    last_message['connectedClients'] = len(connected_clients)
-    try:
-        websockets.broadcast(connected_clients, json.dumps(last_message))
-        await websocket.wait_closed()
-    finally:
-        connected_clients.remove(websocket)
-
+def send_notification(data):
+    if current_notification_type == "notify.run":
+        # data = 'there is a new appointment' 
+        requests.post('https://notify.run/hikDZYwwRR5323UzdZ94', data = json.dumps(data))
+    # websockets.broadcast(connected_clients, json.dumps(last_message))
+    logger.warning("notification sent")
 
 async def main():
     global last_message
-    async with websockets.serve(on_connect, port=80):
-        while True:
-            last_message = look_for_appointments()
-            websockets.broadcast(connected_clients, json.dumps(last_message))
-            await asyncio.sleep(delay)
-
+    # async with websockets.serve(on_connect, port=80):
+    while True:
+        last_message = look_for_appointments()
+        if(last_message['status'] == 200):
+            send_notification(last_message)
+        await asyncio.sleep(delay)
 
 if __name__ == "__main__":
     asyncio.run(main())
