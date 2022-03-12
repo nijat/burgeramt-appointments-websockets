@@ -8,12 +8,10 @@ import asyncio
 import csv
 import json
 import logging
-from fastapi import WebSocket
 import pytz
 import random
 import requests
 import time
-import websockets
 
 
 logging.basicConfig(
