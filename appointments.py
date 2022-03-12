@@ -128,7 +128,7 @@ async def main():
     # async with websockets.serve(on_connect, port=80):
     while True:
         last_message = look_for_appointments()
-        if(last_message['status'] == 200):
+        if(len(last_message['appointmentDates']) != 0):
             send_notification(last_message)
         await asyncio.sleep(delay)
 
